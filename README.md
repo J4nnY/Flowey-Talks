@@ -5,3 +5,7 @@ It uses a tensorflow text setiment classification model to analyze the user inpu
 To run the app, download the source code and run 'main.py'
 
 The GUI is created by PyQt5.
+
+Dependancies: PyQt5, transformers, torch, scipy
+
+Note: file model.safetensors is uploaded using git lsf.
