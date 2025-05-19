@@ -135,6 +135,7 @@ class Window(QMainWindow):
         scaled_header_pixmap = header_pixmap.scaled(50, 50,
             aspectRatioMode=Qt.KeepAspectRatio, transformMode=Qt.FastTransformation)
         self.help.setPixmap(scaled_header_pixmap)
+        self.help.setCursor(QCursor(Qt.PointingHandCursor))
         self.header.addWidget(self.help, stretch=1, alignment=Qt.AlignLeft | Qt.AlignHCenter)
 
         self.image = ClickableLabel()
@@ -188,8 +189,8 @@ class Window(QMainWindow):
         scaled_header_pixmap = header_pixmap.scaled(50, 50,
             aspectRatioMode=Qt.KeepAspectRatio, transformMode=Qt.FastTransformation)
         self.help_back.setPixmap(scaled_header_pixmap)
+        self.help_back.setCursor(QCursor(Qt.PointingHandCursor))
         self.help_header.addWidget(self.help_back, stretch=1, alignment=Qt.AlignLeft | Qt.AlignHCenter)
-
         self.help_page = QWidget()
         # self.help_page.setStyleSheet("background-color: red;")
         self.help_page.setLayout(grid)
@@ -205,50 +206,64 @@ class Window(QMainWindow):
         self.help_layout1.addWidget(self.help_label, stretch=2, alignment=Qt.AlignTop | Qt.AlignHCenter)
 
     def on_help_header_click(self):
-        # self.set_new_image(QPixmap('images/start.png'))
-        # self.set_new_label("* Howdy!\n* I'm FLOWEY. \n* FLOWEY the FLOWER!")
         self.central_widget.setCurrentIndex(0)
 
     def on_main_header_click(self):
-        self.label.stop()
         self.central_widget.setCurrentIndex(1)
 
     def on_image_click(self):
+        # if not hasattr(self, 'hitsound'):
+        if not hasattr(self, 'hitsound'):
+            self.hitsound = QSoundEffect(self)
+            self.hitsound.setVolume(0.5) 
+            self.hitsound.setSource(QUrl.fromLocalFile("sounds/floweyhitsound.wav"))
+        
         match self.secret_count:
             case 0:
+                self.hitsound.play()
                 self.set_new_image(QPixmap(resource_path('images/secret1.png')))
                 self.set_new_label(quotes.secret_1)
                 self.secret_count = 1
             case 1:
+                self.hitsound.play()
                 self.set_new_image(QPixmap(resource_path('images/secret2.png')))
                 self.set_new_label(quotes.secret_2)
                 self.secret_count = 2
             case 2:
+                self.hitsound.play()
                 self.set_new_image(QPixmap(resource_path('images/secret3.png')))
                 self.set_new_label(quotes.secret_3)
                 self.secret_count = 3
             case 3:
+                self.laugh_sound = QSoundEffect(self)
+                self.laugh_sound.setSource(QUrl.fromLocalFile("sounds/flowey-laugh.wav"))
+                self.laugh_sound.setVolume(0.5)  # Volume range: 0.0 to 1.0
+                self.laugh_sound.play()
                 self.set_new_image(QPixmap(resource_path('images/secret4.png')))
-                self.set_new_label(self.rand_dialogue(quotes.secret_4))
+                self.set_new_label(self.rand_dialogue(quotes.secret_4), True)
                 self.secret_count = 4
             case 4:
                 self.set_new_image(QPixmap(resource_path('images/secret5.png')))
-                self.set_new_label(self.rand_dialogue(quotes.secret_5))
+                self.set_new_label(self.rand_dialogue(quotes.secret_5), True)
                 self.secret_count = 5
             case 5:
                 self.set_new_image(QPixmap(resource_path('images/secret6.png')))
-                self.set_new_label(self.rand_dialogue(quotes.secret_6))
+                self.set_new_label(self.rand_dialogue(quotes.secret_6), True)
                 self.secret_count = 6
             case _:
                 self.set_new_image(QPixmap(resource_path(self.get_rand_secr_rep_image())))
                 self.set_new_label(self.rand_dialogue(quotes.secret_repeat))
+        
+
                 
-    def set_new_label(self, text):
+    def set_new_label(self, text, isNeg=False):
         if hasattr(self, 'label') and isinstance(self.label, TypewriterLabel):
             self.label.stop()
             self.layout2.removeWidget(self.label)
             self.label.deleteLater()  # Clean up the old label
         self.label = TypewriterLabel(text, sound_path=resource_path("sounds/voice_flowey_1.wav"), delay=50)
+        if isNeg:
+            self.label.set_evil_sound()
         self.label.setStyleSheet("color: white;")
         self.label.setFont(self.font)
         self.label.setMaximumWidth(int(self.width()*0.8))
@@ -280,6 +295,9 @@ class Window(QMainWindow):
             if self.secret_count > 0 and self.secret_count < 4:
                 self.secret_count = 0
 
+            # print(getattr(self, 'laugh_sound'))
+            if getattr(self, 'laugh_sound', None):
+                self.laugh_sound.stop()
             
             quote = self.ret_und_char_quote(text)
             if self.analyze_text(text) == 1:
@@ -291,9 +309,9 @@ class Window(QMainWindow):
             elif self.analyze_text(text) == -1:
                 self.set_new_image(QPixmap(resource_path(self.get_rand_neg_image())))
                 if quote == "":
-                    self.set_new_label(self.rand_dialogue(quotes.negative_quotes))
+                    self.set_new_label(self.rand_dialogue(quotes.negative_quotes), True)
                 else:
-                    self.set_new_label(quote)
+                    self.set_new_label(quote, True)
             else:
                 self.set_new_image(QPixmap(resource_path(self.get_rand_neut_image())))
                 if quote == "":
@@ -315,7 +333,6 @@ class Window(QMainWindow):
                 return getattr(quotes, char)
             
         return ""
-        
 
     def analyze_text(self, text):
         res = self.classifier.analyze_sentiment(text)[0][0]
@@ -338,7 +355,8 @@ class Window(QMainWindow):
         return "images/positive"+str(rand)+".png"
     
     def get_rand_neg_image(self):
-        rand = random.randint(1, 9)
+        rand = random.randint(1, 7)
+        print("images/negative"+str(rand)+".png")
         return "images/negative"+str(rand)+".png"
     
     def get_rand_neut_image(self):
@@ -370,6 +388,14 @@ class TypewriterLabel(QLabel):
             self.sound.setVolume(0.1)  # Volume range: 0.0 to 1.0
         else:
             self.sound = None
+
+    def set_evil_sound(self):
+        if getattr(self, 'sound'):
+            self.sound.setSource(QUrl.fromLocalFile("sounds/flowey_typing_evil.wav"))
+
+    def set_normal_sound(self):
+        if getattr(self, 'sound'):
+            self.sound.setSource(QUrl.fromLocalFile("sounds/voice_flowey_1.wav"))
 
     def start(self):
         self.setText("")
